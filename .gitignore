@@ -1,0 +1,4 @@
+infinite_website.egg-info/
+**/__pycache__/
+.aider*
+iw.log
