@@ -122,6 +122,10 @@
                 }
 
                 const id = await response.text();
+                // Reset UI state before redirecting
+                updateButton.disabled = false;
+                updateButton.innerHTML = originalText;
+                loadingOverlay.style.display = 'none';
                 window.location.href = `/${id}`;
             } catch (error) {
                 console.error('Error:', error);
