@@ -124,7 +124,7 @@ Return ONLY the modified HTML. Do not include any explanations or markdown forma
         modified_html = message.content[0].text
 
         async with db_engine.create_session() as session:
-            webpage = Webpage(html=modified_html, parent_id=parent_uuid)
+            webpage = Webpage(html=modified_html, parent_id=parent_uuid, prompt=prompt)
             session.add(webpage)
             await session.commit()
             await session.refresh(webpage)
