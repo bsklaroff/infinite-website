@@ -42,13 +42,37 @@ async def get_or_create_initial_webpage():
 async def index(webpage_id=None):
     if webpage_id is None:
         return render_template('index.html')
-        
+
     async with db_engine.create_session() as session:
         webpage = (await session.execute(select(Webpage).where(Webpage.id == webpage_id))).scalar()
         if webpage is not None:
             return webpage.html
-        
+
     return redirect('/')
+
+
+@app.route('/call_claude', methods=['POST'])
+async def call_claude():
+    data = request.get_json()
+    prompt = data.get('prompt')
+
+    if not prompt:
+        return 'Missing prompt', 400
+
+    try:
+        message = await anthropic.messages.create(
+            model='claude-3-5-sonnet-20241022',
+            max_tokens=4096,
+            messages=[{
+                'role': 'user',
+                'content': prompt
+            }]
+        )
+        return jsonify({'response': message.content[0].text})
+
+    except Exception as e:
+        logger.error(f'Error asking Claude: {str(e)}')
+        return str(e), 500
 
 
 @app.route('/modify', methods=['POST'])
@@ -76,6 +100,20 @@ async def modify():
             messages=[{
                 'role': 'user',
                 'content': f"""You are an expert web developer. Modify the following HTML according to this request: {prompt}
+
+You can add direct Claude interaction capabilities to the webpage by implementing JavaScript functions that use the /call_claude endpoint. This endpoint accepts POST requests with a JSON body containing a 'prompt' field and returns Claude's response.
+
+Example usage in JavaScript:
+fetch('/call_claude', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{ prompt: "user's question" }})
+}})
+.then(response => response.json())
+.then(data => {{
+    // data.response contains Claude's message as a string
+    console.log('Claude says:', data.response);
+}});
 
 Here is the current HTML:
 {html}
