@@ -17,6 +17,12 @@ app = Flask(__name__)
 initial_webpage_id: Optional[UUID] = None
 
 
+async def init_app():
+    global initial_webpage_id
+    initial_webpage_id = await get_or_create_initial_webpage()
+    return app
+
+
 async def get_or_create_initial_webpage():
     template_path = Path(__file__).parent / 'templates' / 'index.html'
     with open(template_path, 'r') as f:
@@ -133,17 +139,3 @@ Return ONLY the modified HTML. Do not include any explanations or markdown forma
     except Exception as e:
         logger.error(f'Error modifying webpage: {str(e)}')
         return str(e), 500
-
-
-if __name__ == '__main__':
-    logging.basicConfig(
-        handlers=[
-            logging.FileHandler('iw.log'),
-            logging.StreamHandler(),
-        ],
-        format='[%(asctime)s | %(levelname)s | %(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO,
-    )
-    initial_webpage_id = asyncio.run(get_or_create_initial_webpage())
-    app.run(host='0.0.0.0', port=8008)

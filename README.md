@@ -13,8 +13,10 @@ pip install -e .
 
 Ensure you have `IW_DB_URL` and `ANTHROPIC_API_KEY` env vars set. Then, run the server:
 ```
-python src/sever.py
+gunicorn src.server:app
 ```
+
+The website should now be live at `localhost:8008`
 
 ## Setting Up Local DB
 
@@ -33,5 +35,3 @@ Run alembic migrations (`IW_DB_URL` env var must be set):
 cd /path/to/infinite-website/src/db
 alembic migrate head
 ```
-
-Website should be live at `localhost:8008`
