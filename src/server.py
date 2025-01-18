@@ -43,6 +43,11 @@ async def get_or_create_initial_webpage():
         return initial_page.id
 
 
+@app.route('/healthcheck')
+async def healthcheck():
+    return 'okay'
+
+
 @app.route('/')
 @app.route('/<webpage_id>')
 async def index(webpage_id=None):
