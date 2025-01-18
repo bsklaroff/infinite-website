@@ -13,7 +13,7 @@ pip install -e .
 
 Ensure you have `IW_DB_URL` and `ANTHROPIC_API_KEY` env vars set. Then, run the server:
 ```
-gunicorn src.server:app
+python src/server.py
 ```
 
 The website should now be live at `localhost:8008`

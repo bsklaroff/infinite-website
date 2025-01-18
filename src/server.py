@@ -1,9 +1,11 @@
 from anthropic import AsyncAnthropic
 import asyncio
-from flask import abort, Flask, render_template, request, jsonify, redirect
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 import logging
 import os
 from pathlib import Path
+from quart import abort, Quart, render_template, request, jsonify, redirect
 from sqlmodel import select, Session
 from typing import Optional
 from uuid import UUID
@@ -13,7 +15,7 @@ from db.models import Webpage
 
 logger = logging.getLogger(__name__)
 anthropic = AsyncAnthropic()
-app = Flask(__name__)
+app = Quart(__name__)
 initial_webpage_id: Optional[UUID] = None
 
 
@@ -52,12 +54,12 @@ async def healthcheck():
 @app.route('/<webpage_id>')
 async def index(webpage_id=None):
     if webpage_id is None:
-        return render_template('index.html')
+        return await render_template('index.html')
     else:
         try:
             webpage_uuid = UUID(webpage_id)
         except ValueError:
-            abort(404)
+            return redirect('/')
 
     async with db_engine.create_session() as session:
         webpage = (await session.execute(select(Webpage).where(Webpage.id == webpage_uuid))).scalar()
@@ -69,7 +71,7 @@ async def index(webpage_id=None):
 
 @app.route('/call_claude', methods=['POST'])
 async def call_claude():
-    data = request.get_json()
+    data = await request.get_json()
     prompt = data.get('prompt')
 
     if not prompt:
@@ -93,7 +95,7 @@ async def call_claude():
 
 @app.route('/modify', methods=['POST'])
 async def modify():
-    data = request.get_json()
+    data = await request.get_json()
     html = data.get('html')
     prompt = data.get('prompt')
     parent_id = data.get('parent_id')
@@ -151,3 +153,45 @@ Return ONLY the modified HTML. Do not include any explanations or markdown forma
     except Exception as e:
         logger.error(f'Error modifying webpage: {str(e)}')
         return str(e), 500
+
+
+if __name__ == '__main__':
+    hc_config = Config()
+    hc_config.bind = ['0.0.0.0:8008']
+    hc_config.accesslog = 'iw.log'
+    hc_config.errorlog = 'iw.log'
+    hc_config.loglevel = 'INFO'
+    hc_config.logconfig_dict = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '[%(asctime)s | %(levelname)s | %(name)s] %(message)s',
+                'datefmt': '%Y-%m-%d %H:%M:%S %z'
+            }
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard',
+                'stream': 'ext://sys.stdout'
+            },
+            'file': {
+                'class': 'logging.FileHandler',
+                'formatter': 'standard',
+                'filename': 'iw.log',
+                'mode': 'a'
+            }
+        },
+        'loggers': {
+            'hypercorn.access': {
+                'level': 'INFO',
+                'handlers': ['console', 'file']
+            },
+            'hypercorn.error': {
+                'level': 'INFO',
+                'handlers': ['console', 'file']
+            }
+        }
+    }
+    asyncio.run(serve(app, hc_config))
