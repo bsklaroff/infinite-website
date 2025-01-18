@@ -117,6 +117,8 @@ async def modify():
                 'role': 'user',
                 'content': f"""You are an expert web developer. Modify the following HTML according to this request: {prompt}
 
+IMPORTANT: Do not remove or modify the self-modification card (the section that allows users to modify the webpage) unless explicitly asked to do so in the prompt.
+
 You can add direct Claude interaction capabilities to the webpage by implementing JavaScript functions that use the /call_claude endpoint. This endpoint accepts POST requests with a JSON body containing a 'prompt' field and returns Claude's response.
 
 Example usage in JavaScript:
