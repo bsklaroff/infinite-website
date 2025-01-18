@@ -1,6 +1,6 @@
 from anthropic import AsyncAnthropic
 import asyncio
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import abort, Flask, render_template, request, jsonify, redirect
 import logging
 import os
 from pathlib import Path
@@ -53,9 +53,14 @@ async def healthcheck():
 async def index(webpage_id=None):
     if webpage_id is None:
         return render_template('index.html')
+    else:
+        try:
+            webpage_uuid = UUID(webpage_id)
+        except ValueError:
+            abort(404)
 
     async with db_engine.create_session() as session:
-        webpage = (await session.execute(select(Webpage).where(Webpage.id == webpage_id))).scalar()
+        webpage = (await session.execute(select(Webpage).where(Webpage.id == webpage_uuid))).scalar()
         if webpage is not None:
             return webpage.html
 
