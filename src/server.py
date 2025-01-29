@@ -1,14 +1,19 @@
-from anthropic import AsyncAnthropic
 import asyncio
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
+from datetime import datetime, UTC
 import logging
 import os
 from pathlib import Path
-from quart import abort, Quart, render_template, request, jsonify, redirect
-from sqlmodel import select, Session
 from typing import Optional
 from uuid import UUID
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
+
+from anthropic import AsyncAnthropic
+import boto3
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
+from quart import Quart, render_template, request, jsonify, redirect
+from sqlmodel import select
 
 from db.engine import db_engine
 from db.models import Webpage
@@ -16,6 +21,9 @@ from db.models import Webpage
 logger = logging.getLogger(__name__)
 anthropic = AsyncAnthropic()
 app = Quart(__name__)
+s3_client = boto3.client('s3')
+S3_BUCKET = os.environ['AWS_S3_BUCKET']
+S3_REGION = s3_client.get_bucket_location(Bucket=S3_BUCKET)['LocationConstraint'] or 'us-east-1'
 initial_webpage_id: Optional[UUID] = None
 
 
@@ -55,14 +63,15 @@ async def healthcheck():
 async def index(webpage_id=None):
     if webpage_id is None:
         return await render_template('index.html')
-    else:
-        try:
-            webpage_uuid = UUID(webpage_id)
-        except ValueError:
-            return redirect('/')
+    try:
+        webpage_uuid = UUID(webpage_id)
+    except ValueError:
+        return redirect('/')
 
     async with db_engine.create_session() as session:
-        webpage = (await session.execute(select(Webpage).where(Webpage.id == webpage_uuid))).scalar()
+        webpage = (await session.execute(
+            select(Webpage).where(Webpage.id == webpage_uuid)
+        )).scalar()
         if webpage is not None:
             return webpage.html
 
@@ -95,10 +104,13 @@ async def call_claude():
 
 @app.route('/modify', methods=['POST'])
 async def modify():
-    data = await request.get_json()
-    html = data.get('html')
-    prompt = data.get('prompt')
-    parent_id = data.get('parent_id')
+    form = await request.form
+    files = await request.files
+
+    html = form.get('html')
+    prompt = form.get('prompt')
+    parent_id = form.get('parent_id')
+    image_files = files.getlist('image_files')
 
     if not html or not prompt:
         return 'Missing html or prompt', 400
@@ -111,6 +123,11 @@ async def modify():
     else:
         parent_uuid = initial_webpage_id
 
+    file_info = ''
+    for file in image_files:
+        file_url = upload_file_to_s3(file)
+        file_info += f"\nFile '{file.filename}' has been uploaded and is available at: {file_url}"
+
     try:
         message = await anthropic.messages.create(
             model='claude-3-5-sonnet-20241022',
@@ -118,6 +135,8 @@ async def modify():
             messages=[{
                 'role': 'user',
                 'content': f"""You are an expert web developer. Modify the following HTML according to this request: {prompt}
+
+Additional context: {file_info if file_info else 'No files were uploaded'}
 
 IMPORTANT: Do not remove or modify the self-modification card (the section that allows users to modify the webpage) unless explicitly asked to do so in the prompt.
 
@@ -138,7 +157,7 @@ fetch('/call_claude', {{
 Here is the current HTML:
 {html}
 
-Return ONLY the modified HTML. Do not include any explanations or markdown formatting."""
+Return ONLY the modified HTML. Do not include any explanations or markdown formatting.""" # noqa
             }]
         )
         modified_html = message.content[0].text
@@ -153,6 +172,20 @@ Return ONLY the modified HTML. Do not include any explanations or markdown forma
     except Exception as e:
         logger.error(f'Error modifying webpage: {str(e)}')
         return str(e), 500
+
+
+def upload_file_to_s3(file: FileStorage) -> str:
+    now = datetime.now(UTC)
+    timestamp = now.strftime('%Y%m%d_%H%M%S_') + f'{int(now.microsecond/1000):03d}'
+    filename = f'{timestamp}_{secure_filename(file.filename)}'
+    s3_client.upload_fileobj(
+        file.stream,
+        S3_BUCKET,
+        filename,
+        ExtraArgs={'ContentType': file.content_type}
+    )
+    url = f'https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{filename}'
+    return url
 
 
 if __name__ == '__main__':

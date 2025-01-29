@@ -11,7 +11,7 @@ Install infinite-website as a local python package, with all dependencies:
 pip install -e .
 ```
 
-Ensure you have `IW_DB_URL` and `ANTHROPIC_API_KEY` env vars set. Then, run the server:
+Ensure you have `IW_DB_URL`, `ANTHROPIC_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY_ID`, and `AWS_S3_BUCKET` env vars set. Then, run the server:
 ```
 python src/server.py
 ```
@@ -35,3 +35,9 @@ Run alembic migrations (`IW_DB_URL` env var must be set):
 cd /path/to/infinite-website/src/db
 alembic migrate head
 ```
+
+## Setting up AWS S3
+
+To allow for image uploads, you must create an AWS S3 bucket with public read access, and an IAM account with write access permissions `s3:PutObject`, `s3:ListBucket`, and `s3:GetBucketLocation` on resources `arn:aws:s3:::your-bucket-name` and `arn:aws:s3:::your-bucket-name/*`.
+
+Then, set the env var `AWS_S3_BUCKET` to the bucket name, and env vars `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY_ID` to the IAM account credentials.

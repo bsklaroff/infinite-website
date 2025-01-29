@@ -47,6 +47,12 @@
             background: #cbd5e0;
             cursor: not-allowed;
         }
+        #uploadButton {
+            width: 120px;
+        }
+        #updateButton {
+            width: 120px;
+        }
         h2, p {
             color: #2d3748;
         }
@@ -85,6 +91,8 @@
         <p>Use the prompt below to tell me how you'd like me to change.</p>
         <div class="input-group">
             <input type="text" id="promptInput" placeholder="Describe how you'd like to modify the website...">
+            <input type="file" id="imageInput" accept="image/*" multiple style="display: none" onchange="updateFileCount()">
+            <button id="uploadButton" onclick="document.getElementById('imageInput').click()">Add Images</button>
             <button id="updateButton" onclick="handleUpdate()">Update</button>
         </div>
     </div>
@@ -94,11 +102,29 @@
         const updateButton = document.getElementById('updateButton');
         const loadingOverlay = document.getElementById('loadingOverlay');
 
+        function updateFileCount() {
+            const fileCount = document.getElementById('imageInput').files.length;
+            const uploadButton = document.getElementById('uploadButton');
+            if (fileCount === 0) {
+                uploadButton.textContent = 'Add Images';
+            } else {
+                uploadButton.textContent = `${fileCount} Image${fileCount === 1 ? '' : 's'}`;
+            }
+        }
+        updateFileCount();
+
         async function handleUpdate() {
             const prompt = promptInput.value.trim();
             if (!prompt) return;
 
-            const htmlToSend = document.documentElement.outerHTML;
+            const formData = new FormData();
+            formData.append('html', document.documentElement.outerHTML);
+            formData.append('prompt', prompt);
+            formData.append('parent_id', window.location.pathname.substring(1));
+            Array.from(document.getElementById('imageInput').files).forEach(file => {
+                formData.append('image_files', file);
+            });
+
             updateButton.disabled = true;
             loadingOverlay.style.display = 'flex';
             const originalText = updateButton.textContent;
@@ -107,14 +133,7 @@
             try {
                 const response = await fetch('/modify', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        html: htmlToSend,
-                        prompt: prompt,
-                        parent_id: window.location.pathname.substring(1) || null
-                    })
+                    body: formData
                 });
 
                 if (!response.ok) {
