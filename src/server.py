@@ -142,7 +142,12 @@ IMPORTANT: Do not remove or modify the self-modification card (the section that 
 
 You can add direct Claude interaction capabilities to the webpage by implementing JavaScript functions that use the /call_claude endpoint. This endpoint accepts POST requests with a JSON body containing a 'prompt' field and returns Claude's response.
 
-Example usage in JavaScript:
+For client-side routing, you can create new pages by:
+1. Adding HTML elements with id="pageName" class="page"
+2. Using the Router class to register routes with router.addRoute('pageName', callback)
+3. Linking to pages with href="#pageName"
+
+Example Claude interaction in JavaScript:
 fetch('/call_claude', {{
     method: 'POST',
     headers: {{ 'Content-Type': 'application/json' }},

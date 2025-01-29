@@ -80,9 +80,18 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
     </style>
 </head>
 <body onload="document.getElementById('promptInput').focus()">
+    <div class="nav-bar"></div>
+    <div id="home" class="page">
+    </div>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
     </div>
@@ -96,7 +105,6 @@
             <button id="updateButton" onclick="handleUpdate()">Update</button>
         </div>
     </div>
-
     <script>
         const promptInput = document.getElementById('promptInput');
         const updateButton = document.getElementById('updateButton');
@@ -160,6 +168,44 @@
                 handleUpdate();
             }
         });
+
+        class Router {
+            constructor() {
+                this.routes = {};
+                this.currentPage = null;
+                window.addEventListener('hashchange', () => this.handleRoute());
+                window.addEventListener('load', () => this.handleRoute());
+            }
+
+            addRoute(path, callback) {
+                this.routes[path] = callback;
+            }
+
+            handleRoute() {
+                const hash = window.location.hash || '#home';
+                const page = hash.slice(1); // Remove the # symbol
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                });
+                const currentPage = document.getElementById(page);
+                if (currentPage) {
+                    currentPage.classList.add('active');
+                    this.currentPage = page;
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === hash) {
+                            link.classList.add('active');
+                        }
+                    });
+                    // Execute route callback if exists
+                    if (this.routes[page]) {
+                        this.routes[page]();
+                    }
+                }
+            }
+        }
+
+        const router = new Router();
     </script>
 
 </body></html>
