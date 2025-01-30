@@ -126,7 +126,6 @@
             if (!prompt) return;
 
             const formData = new FormData();
-            formData.append('html', document.documentElement.outerHTML);
             formData.append('prompt', prompt);
             formData.append('parent_id', window.location.pathname.substring(1));
             Array.from(document.getElementById('imageInput').files).forEach(file => {
@@ -150,10 +149,6 @@
                 }
 
                 const id = await response.text();
-                // Reset UI state before redirecting
-                updateButton.disabled = false;
-                updateButton.innerHTML = originalText;
-                loadingOverlay.style.display = 'none';
                 window.location.href = `/${id}`;
             } catch (error) {
                 console.error('Error:', error);

@@ -14,6 +14,7 @@ class Webpage(SQLModel, table=True):
     children: list['Webpage'] = Relationship(back_populates='parent')
     html: str
     prompt: Optional[str]
+    llm_response: Optional[str]
     created_at: datetime = Field(sa_column=Column(
         DateTime(timezone=True),
         nullable=False,

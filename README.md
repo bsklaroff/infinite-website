@@ -11,7 +11,7 @@ Install infinite-website as a local python package, with all dependencies:
 pip install -e .
 ```
 
-Ensure you have `IW_DB_URL`, `ANTHROPIC_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY_ID`, and `AWS_S3_BUCKET` env vars set. Then, run the server:
+Ensure you have `IW_DB_URL`, `IW_ANTHROPIC_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY_ID`, and `AWS_S3_BUCKET` env vars set. Then, run the server:
 ```
 python src/server.py
 ```
