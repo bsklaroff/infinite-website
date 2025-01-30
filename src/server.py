@@ -170,11 +170,9 @@ Include enough lines in each SEARCH section to uniquely match each set of lines 
 To move code within the source HTML, use 2 *SEARCH/REPLACE* blocks: 1 to delete it from its current location, 1 to insert it in the new location.
 
 For client-side routing, you can create new pages by:
-1. Adding HTML div elements with id="pageName" class="page" at the top-level of the body of the html
+1. Adding HTML div elements with id="pageName" class="page" in the html. These 'page' div elements should all be siblings of each other in the HTML, nested at the same level within the same parent element
 2. Using the Router class to register routes with router.addRoute('pageName', callback)
 3. Linking to pages with href="#pageName"
-
-Only add new pages if there are multiple separate pages worth of information to display (the self-modification card does not count, and should stay at the bottom of all pages unless otherwise specified by the user).
 
 You can add direct Claude interaction capabilities to the webpage by implementing JavaScript functions that use the /call_claude endpoint. This endpoint accepts POST requests with a JSON body containing a 'prompt' field and returns Claude's response.
 
@@ -192,7 +190,7 @@ fetch('/call_claude', {{
 
 Additional context for newly uploaded files: {file_info if file_info else 'No files were uploaded'}
 
-IMPORTANT: Do not remove the self-modification card (the section that allows users to modify the webpage) unless explicitly asked to do so in the prompt.
+IMPORTANT: Do not remove the Router or the Website Editor popup (included in script tag with src="/static/modification.js") unless explicitly asked to do so in the user's request.
 
 Modify the following HTML source according to this request: {prompt}
 

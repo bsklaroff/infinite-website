@@ -1,7 +1,9 @@
-<html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Self-Modifying Website</title>
+    <title>Self-Editing Website</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
         body {
@@ -12,74 +14,6 @@
             background-color: #f0f4f8;
             overflow: hidden;
         }
-        .card {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            margin-bottom: 1rem;
-        }
-        .input-group {
-            display: flex;
-            gap: 0.5rem;
-            margin: 1rem 0;
-        }
-        input {
-            flex: 1;
-            padding: 0.5rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-        }
-        button {
-            padding: 0.5rem 1rem;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background: #2563eb;
-        }
-        button:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-        }
-        #uploadButton {
-            width: 120px;
-        }
-        #updateButton {
-            width: 120px;
-        }
-        h2, p {
-            color: #2d3748;
-        }
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #4a5568;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
         .page {
             display: none;
         }
@@ -88,82 +22,8 @@
         }
     </style>
 </head>
-<body onload="document.getElementById('promptInput').focus()">
-    <div class="nav-bar"></div>
-    <div id="home" class="page">
-    </div>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-    </div>
-    <div class="card">
-        <h2>Hello, I'm a self-modifying website!</h2>
-        <p>Use the prompt below to tell me how you'd like me to change.</p>
-        <div class="input-group">
-            <input type="text" id="promptInput" placeholder="Describe how you'd like to modify the website...">
-            <input type="file" id="imageInput" accept="image/*" multiple style="display: none" onchange="updateFileCount()">
-            <button id="uploadButton" onclick="document.getElementById('imageInput').click()">Add Images</button>
-            <button id="updateButton" onclick="handleUpdate()">Update</button>
-        </div>
-    </div>
+<body>
     <script>
-        const promptInput = document.getElementById('promptInput');
-        const updateButton = document.getElementById('updateButton');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-
-        function updateFileCount() {
-            const fileCount = document.getElementById('imageInput').files.length;
-            const uploadButton = document.getElementById('uploadButton');
-            if (fileCount === 0) {
-                uploadButton.textContent = 'Add Images';
-            } else {
-                uploadButton.textContent = `${fileCount} Image${fileCount === 1 ? '' : 's'}`;
-            }
-        }
-        updateFileCount();
-
-        async function handleUpdate() {
-            const prompt = promptInput.value.trim();
-            if (!prompt) return;
-
-            const formData = new FormData();
-            formData.append('prompt', prompt);
-            formData.append('parent_id', window.location.pathname.substring(1));
-            Array.from(document.getElementById('imageInput').files).forEach(file => {
-                formData.append('image_files', file);
-            });
-
-            updateButton.disabled = true;
-            loadingOverlay.style.display = 'flex';
-            const originalText = updateButton.textContent;
-            updateButton.innerHTML = 'Updating...';
-
-            try {
-                const response = await fetch('/modify', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error: ${errorText}`);
-                }
-
-                const id = await response.text();
-                window.location.href = `/${id}`;
-            } catch (error) {
-                console.error('Error:', error);
-                updateButton.disabled = false;
-                updateButton.innerHTML = originalText;
-                loadingOverlay.style.display = 'none';
-            }
-        }
-
-        promptInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !updateButton.disabled) {
-                handleUpdate();
-            }
-        });
-
         class Router {
             constructor() {
                 this.routes = {};
@@ -182,19 +42,24 @@
                 document.querySelectorAll('.page').forEach(page => {
                     page.classList.remove('active');
                 });
-                const currentPage = document.getElementById(page);
+                let currentPage = document.getElementById(page);
+                // If no page found with current hash, remove the hash and default to first .page element
+                if (!currentPage) {
+                    history.replaceState(null, '', window.location.pathname);
+                    currentPage = document.querySelector('.page');
+                }
                 if (currentPage) {
                     currentPage.classList.add('active');
-                    this.currentPage = page;
+                    this.currentPage = currentPage.id;
                     document.querySelectorAll('.nav-link').forEach(link => {
                         link.classList.remove('active');
-                        if (link.getAttribute('href') === hash) {
+                        if (link.getAttribute('href') === '#' + currentPage.id) {
                             link.classList.add('active');
                         }
                     });
                     // Execute route callback if exists
-                    if (this.routes[page]) {
-                        this.routes[page]();
+                    if (this.routes[currentPage.id]) {
+                        this.routes[currentPage.id]();
                     }
                 }
             }
@@ -202,5 +67,6 @@
 
         const router = new Router();
     </script>
-
-</body></html>
+    <script src="/static/modification.js"></script>
+</body>
+</html>
