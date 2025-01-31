@@ -190,12 +190,19 @@ fetch('/call_claude', {{
 
 Additional context for newly uploaded files: {file_info if file_info else 'No files were uploaded'}
 
+Try not to add broken links to images. Only add images with public urls, or a url corresponding to one of the uploaded files.
+
 IMPORTANT: Do not remove the Router or the Website Editor popup (included in script tag with src="/static/modification.js") unless explicitly asked to do so in the user's request.
+
+If you have a suggestion for follow-up edits to the webpage, you can call the prefillEditPrompt() function (defined in modification.js) within the final script tag.
+The prefillEditPrompt function takes a single string argument, which will be used to prefill the prompt that the user fills out to request edits to this webpage.
 
 Modify the following HTML source according to this request: {prompt}
 
 Here is the source HTML:
 {html}
+
+IMPORTANT: Be sure to delete existing calls to prefillEditPrompt from the source HTML, since we don't want to prefill the prompt with the same message on multiple iterations.
 
 Please try to make the resulting website look as professional as possible.
 You are diligent and tireless!

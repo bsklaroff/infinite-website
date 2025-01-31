@@ -32,14 +32,14 @@ const styles = `
         margin: 0;
         font-size: 1rem;
     }
-    .minimize-button {
+    .modify-card .minimize-button {
         background: none;
         border: none;
         cursor: pointer;
         padding: 0.25rem;
         color: #64748b;
     }
-    .minimize-button:hover {
+    .modify-card .minimize-button:hover {
         color: #334155;
     }
     .modify-card .input-group {
@@ -47,11 +47,26 @@ const styles = `
         gap: 0.5rem;
         margin: 1rem 0;
     }
-    .modify-card input {
+    .modify-card .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .modify-card input[type="file"] {
+        display: none;
+    }
+    .modify-card textarea {
         flex: 1;
         padding: 0.5rem;
         border: 1px solid #e2e8f0;
         border-radius: 4px;
+        resize: none;
+        min-height: 40px;
+        max-height: 200px;
+        overflow-y: hidden;
+        line-height: 1.5;
+        font-family: inherit;
+        font-size: inherit;
     }
     .modify-card button {
         padding: 0.5rem 1rem;
@@ -69,11 +84,18 @@ const styles = `
         background: #cbd5e0;
         cursor: not-allowed;
     }
+    .modify-card #updateButton {
+        width: 120px;
+    }
     .modify-card #uploadButton {
         width: 120px;
     }
-    .modify-card #updateButton {
-        width: 120px;
+    .modify-card .suggestion-message {
+        color: #4a5568;
+        font-size: 0.9rem;
+        margin: 0.5rem 0;
+        font-style: italic;
+        display: none;
     }
     .modify-loading-overlay {
         display: none;
@@ -113,11 +135,14 @@ const content = `
             <button class="minimize-button" id="minimizeButton">▼</button>
         </div>
         <p>Use the prompt below to describe your changes, and optionally add images to upload to the site.</p>
+        <p id="suggestionMessage" class="suggestion-message"></p>
         <div class="input-group">
-            <input type="text" id="promptInput" placeholder="Describe how you'd like to modify the website...">
-            <input type="file" id="imageInput" accept="image/*" multiple style="display: none" onchange="updateFileCount()">
-            <button id="uploadButton" onclick="document.getElementById('imageInput').click()">Add Images</button>
-            <button id="updateButton" onclick="handleUpdate()">Update</button>
+            <textarea id="promptInput" placeholder="Describe how you'd like to modify the website..." rows="1"></textarea>
+            <div class="button-group">
+                <input type="file" id="imageInput" accept="image/*" multiple onchange="updateFileCount()">
+                <button id="uploadButton" onclick="document.getElementById('imageInput').click()">Add Images</button>
+                <button id="updateButton" onclick="handleUpdate()">Update</button>
+            </div>
         </div>
     </div>
     <div class="modify-loading-overlay" id="loadingOverlay">
@@ -136,7 +161,6 @@ const modifyCard = document.getElementById('modifyCard');
 const minimizeButton = document.getElementById('minimizeButton');
 const cardHeader = document.getElementById('cardHeader');
 
-// Setup minimize/maximize functionality
 let isMinimized = false;
 
 function toggleMinimize() {
@@ -161,8 +185,25 @@ cardHeader.addEventListener('click', () => {
     }
 });
 
-// Initial focus
-promptInput.focus();
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+promptInput.addEventListener('input', () => {
+    autoResize(promptInput);
+});
+
+function prefillEditPrompt(suggestion) {
+    const promptInput = document.getElementById('promptInput');
+    const suggestionMessage = document.getElementById('suggestionMessage');
+    promptInput.value = suggestion;
+    suggestionMessage.textContent = "A suggested edit has been prefilled. Feel free to modify it before updating.";
+    suggestionMessage.style.display = 'block';
+    promptInput.focus();
+    promptInput.select();
+    autoResize(promptInput);
+}
 
 function updateFileCount() {
     const fileCount = document.getElementById('imageInput').files.length;
@@ -213,10 +254,14 @@ async function handleUpdate() {
 
 // Add event listener for Enter key
 promptInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !updateButton.disabled) {
-        handleUpdate();
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Prevent newline
+        if (!updateButton.disabled) {
+            handleUpdate();
+        }
     }
 });
 
-// Initialize file count on load
+promptInput.focus();
+autoResize(promptInput);
 updateFileCount();
