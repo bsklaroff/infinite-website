@@ -82,19 +82,41 @@ async def call_claude():
         return 'Missing prompt', 400
 
     try:
-        message = await anthropic.messages.create(
-            model='claude-3-5-sonnet-20241022',
-            max_tokens=4096,
-            messages=[{
-                'role': 'user',
-                'content': prompt
-            }]
-        )
-        return jsonify({'response': message.content[0].text})
+        full_response = await get_complete_response(prompt)
+        return jsonify({'response': full_response})
 
     except Exception as e:
         logger.error(f'Error asking Claude: {str(e)}')
         return str(e), 500
+
+
+async def get_complete_response(prompt, max_iterations=10):
+    """Get complete response from Claude, handling token limit hits by iterative querying"""
+    current_response = ''
+
+    for i in range(max_iterations):
+        logger.info(f'Claude iteration {i+1}/{max_iterations}')
+        message = await anthropic.messages.create(
+            model='claude-3-7-sonnet-20250219',
+            max_tokens=8192,
+            messages=[
+                {'role': 'user', 'content': prompt},
+                {'role': 'assistant', 'content': current_response},
+            ]
+        )
+
+        part_response = message.content[0].text
+        current_response += part_response
+
+        # Check if we hit token limit
+        if message.stop_reason == 'max_tokens':
+            logger.info(f'Hit max_tokens limit on iteration {i+1}, continuing...')
+        else:
+            # Response is complete
+            logger.info(f'Response complete with stop_reason: {message.stop_reason}')
+            break
+
+    return current_response
 
 
 @app.route('/modify', methods=['POST'])
@@ -129,12 +151,7 @@ async def modify():
 
     try:
         # SEARCH/REPLACE instructions copied from https://github.com/Aider-AI/aider
-        message = await anthropic.messages.create(
-            model='claude-3-5-sonnet-20241022',
-            max_tokens=4096,
-            messages=[{
-                'role': 'user',
-                'content': f"""You are an expert web developer.
+        modify_prompt = f"""You are an expert web developer.
 You are diligent and tireless!
 You NEVER leave comments describing code without implementing it!
 You always COMPLETELY IMPLEMENT the needed code!
@@ -209,9 +226,9 @@ You are diligent and tireless!
 You NEVER leave comments describing code without implementing it!
 You always COMPLETELY IMPLEMENT the needed code!
 ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!""" # noqa
-            }]
-        )
-        llm_response = message.content[0].text
+
+        # Use the iterative query function to handle token limit issues
+        llm_response = await get_complete_response(modify_prompt)
         modified_html = apply_search_replace_blocks(html, llm_response)
 
         async with db_engine.create_session() as session:
